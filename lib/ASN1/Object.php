@@ -44,6 +44,7 @@ abstract class Object implements Parsable
 {
     private $contentLength;
     private $nrOfLengthOctets;
+	private $implicitTag = null;
 
     /**
      * Must return the number of octets of the content part.
@@ -99,6 +100,16 @@ abstract class Object implements Parsable
         return chr($firstOctet);
     }
 
+	/**
+	 * Change the object into an implicitly tagged object.
+	 * @param int $tag	
+	 * @param int $class default Identifier::CLASS_CONTEXT_SPECIFIC
+	 */
+	public function tagImplicit($tag, $class = Identifier::CLASS_CONTEXT_SPECIFIC) {
+		$constructed = $this->getType() & Identifier::IS_CONSTRUCTED;
+		$this->implicitTag = $class << 6 | $constructed | ($tag & 0x1F);
+	}
+
     /**
      * Encode this object using DER encoding.
      *
@@ -106,7 +117,12 @@ abstract class Object implements Parsable
      */
     public function getBinary()
     {
-        $result  = $this->getIdentifier();
+		// if object is implicitly tagged, override tag number
+		if (!is_null($this->implicitTag)) {
+			$result = chr($this->implicitTag);
+		} else {
+			$result  = $this->getIdentifier();
+		}
         $result .= $this->createLengthPart();
         $result .= $this->getEncodedValue();
 
